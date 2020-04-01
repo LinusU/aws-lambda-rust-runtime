@@ -24,32 +24,32 @@ use crate::{
 #[doc(hidden)]
 #[derive(Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct LambdaRequest<'a> {
-    pub(crate) path: Cow<'a, str>,
+pub struct LambdaRequest<'a> {
+    pub path: Cow<'a, str>,
     #[serde(deserialize_with = "deserialize_method")]
-    pub(crate) http_method: Method,
+    pub http_method: Method,
     #[serde(deserialize_with = "deserialize_headers")]
-    pub(crate) headers: HeaderMap<HeaderValue>,
+    pub headers: HeaderMap<HeaderValue>,
     /// For alb events these are only present when
     /// the `lambda.multi_value_headers.enabled` target group setting turned on
     #[serde(default, deserialize_with = "deserialize_multi_value_headers")]
-    pub(crate) multi_value_headers: HeaderMap<HeaderValue>,
+    pub multi_value_headers: HeaderMap<HeaderValue>,
     #[serde(deserialize_with = "nullable_default")]
-    pub(crate) query_string_parameters: StrMap,
+    pub query_string_parameters: StrMap,
     /// For alb events these are only present when
     /// the `lambda.multi_value_headers.enabled` target group setting turned on
     #[serde(default, deserialize_with = "nullable_default")]
-    pub(crate) multi_value_query_string_parameters: StrMap,
+    pub multi_value_query_string_parameters: StrMap,
     /// ALB events do not have path parameters.
     #[serde(default, deserialize_with = "nullable_default")]
-    pub(crate) path_parameters: StrMap,
+    pub path_parameters: StrMap,
     /// ALB events do not have stage variables.
     #[serde(default, deserialize_with = "nullable_default")]
-    pub(crate) stage_variables: StrMap,
-    pub(crate) body: Option<Cow<'a, str>>,
+    pub stage_variables: StrMap,
+    pub body: Option<Cow<'a, str>>,
     #[serde(default)]
-    pub(crate) is_base64_encoded: bool,
-    pub(crate) request_context: RequestContext,
+    pub is_base64_encoded: bool,
+    pub request_context: RequestContext,
 }
 
 /// Event request context as an enumeration of request contexts

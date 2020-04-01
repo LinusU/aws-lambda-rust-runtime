@@ -15,7 +15,7 @@ use crate::body::Body;
 /// Representation of API Gateway response
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct LambdaResponse {
+pub struct LambdaResponse {
     pub status_code: u16,
     // ALB requires a statusDescription i.e. "200 OK" field but API Gateway returns an error
     // when one is provided. only populate this for ALB responses
@@ -76,7 +76,7 @@ where
 
 /// tranformation from http type to internal type
 impl LambdaResponse {
-    pub(crate) fn from_response<T>(is_alb: bool, value: Response<T>) -> Self
+    pub fn from_response<T>(is_alb: bool, value: Response<T>) -> Self
     where
         T: Into<Body>,
     {

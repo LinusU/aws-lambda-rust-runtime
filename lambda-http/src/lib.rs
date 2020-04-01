@@ -58,9 +58,13 @@
 #[macro_use]
 extern crate maplit;
 
+use std::{fmt, future::Future};
+
 pub use http::{self, Response};
-use lambda_runtime::{self as lambda, error::HandlerError, Context};
+use lambda::{self as lambda, LambdaCtx as Context, Handler as UpstreamHandler};
 use tokio::runtime::Runtime as TokioRuntime;
+
+use futures::future::FutureExt;
 
 mod body;
 mod ext;
@@ -69,63 +73,85 @@ mod response;
 mod strmap;
 
 pub use crate::{body::Body, ext::RequestExt, response::IntoResponse, strmap::StrMap};
-use crate::{request::LambdaRequest, response::LambdaResponse};
+pub use crate::{request::LambdaRequest, response::LambdaResponse};
+
+// type HandlerError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 /// Type alias for `http::Request`s with a fixed `lambda_http::Body` body
 pub type Request = http::Request<Body>;
 
-/// Functions serving as ALB and API Gateway handlers must conform to this type.
-pub trait Handler<R> {
-    /// Run the handler.
-    fn run(&mut self, event: Request, ctx: Context) -> Result<R, HandlerError>;
-}
+// /// Functions serving as ALB and API Gateway handlers must conform to this type.
+// pub trait Handler<R> {
+//     /// Errors returned by this handler.
+//     type Err;
+//     /// The future response value of this handler.
+//     type Fut: Future<Output = Result<R, Self::Err>>;
+//     /// Run the handler.
+//     fn run(&mut self, event: Request) -> Self::Fut;
+// }
 
-impl<F, R> Handler<R> for F
-where
-    F: FnMut(Request, Context) -> Result<R, HandlerError>,
-{
-    fn run(&mut self, event: Request, ctx: Context) -> Result<R, HandlerError> {
-        (*self)(event, ctx)
-    }
-}
+// impl<F, R, Err, Fut> Handler<R> for F
+// where
+//     F: FnMut(Request) -> Fut,
+//     Fut: Future<Output = Result<R, Err>> + Send,
+//     Err: Into<Box<dyn std::error::Error + Send + Sync + 'static>> + fmt::Debug,
+// {
+//     type Err = Err;
+//     type Fut = Fut;
+//     fn run(&mut self, event: Request) -> Self::Fut {
+//         (*self)(event)
+//     }
+// }
 
-/// Creates a new `lambda_runtime::Runtime` and begins polling for ALB and API Gateway events
-///
-/// # Arguments
-///
-/// * `f` A type that conforms to the `Handler` interface.
-///
-/// # Panics
-/// The function panics if the Lambda environment variables are not set.
-pub fn start<R>(f: impl Handler<R>, runtime: Option<TokioRuntime>)
-where
-    R: IntoResponse,
-{
-    // handler requires a mutable ref
-    let mut func = f;
-    lambda::start(
-        |req: LambdaRequest<'_>, ctx: Context| {
-            let is_alb = req.request_context.is_alb();
-            func.run(req.into(), ctx)
-                .map(|resp| LambdaResponse::from_response(is_alb, resp.into_response()))
-        },
-        runtime,
-    )
-}
+// impl<R> UpstreamHandler<Request, R> for Handler
+// {
+//     type Err = Self::Err;
+//     type Fut = Self::Fut;
+//     async fn call(&mut self, event: A) -> Result<R, Self::Err> {
+//         todo!()
+//     }
+// }
 
-/// A macro for starting new handler's poll for API Gateway and ALB events
-#[macro_export]
-macro_rules! lambda {
-    ($handler:expr) => {
-        $crate::start($handler, None)
-    };
-    ($handler:expr, $runtime:expr) => {
-        $crate::start($handler, Some($runtime))
-    };
-    ($handler:ident) => {
-        $crate::start($handler, None)
-    };
-    ($handler:ident, $runtime:expr) => {
-        $crate::start($handler, Some($runtime))
-    };
-}
+// /// Creates a new `lambda_runtime::Runtime` and begins polling for ALB and API Gateway events
+// ///
+// /// # Arguments
+// ///
+// /// * `f` A type that conforms to the `Handler` interface.
+// ///
+// /// # Panics
+// /// The function panics if the Lambda environment variables are not set.
+// pub fn start<R>(f: impl Handler<R>, runtime: Option<TokioRuntime>)
+// where
+//     R: IntoResponse,
+// {
+//     // handler requires a mutable ref
+//     let mut func = f;
+//     runtime.unwrap().block_on(
+//         lambda::run(
+//             lambda::handler_fn(
+//                 |req: LambdaRequest<'_>| {
+//                     let is_alb = req.request_context.is_alb();
+//                     func.run(req.into())
+//                         .map(|result| result.map(|resp| LambdaResponse::from_response(is_alb, resp.into_response())))
+//                 },
+//             )
+//         )
+//     );
+// }
+
+// /// A macro for starting new handler's poll for API Gateway and ALB events
+// #[macro_export]
+// macro_rules! lambda {
+//     ($handler:expr) => {
+//         $crate::start($handler, None)
+//     };
+//     ($handler:expr, $runtime:expr) => {
+//         $crate::start($handler, Some($runtime))
+//     };
+//     ($handler:ident) => {
+//         $crate::start($handler, None)
+//     };
+//     ($handler:ident, $runtime:expr) => {
+//         $crate::start($handler, Some($runtime))
+//     };
+// }
